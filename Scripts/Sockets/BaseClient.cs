@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using UnityEngine;
 using DoubTech.Util;
@@ -13,13 +12,15 @@ namespace DoubTech.Sockets {
         private Thread socketThread;
         private Socket socket;
         [SerializeField]
-        private string host;
+        private string host = "localhost";
         [SerializeField]
-        private int port;
+        private int port = 4444;
         [SerializeField]
-        private ProtocolType protocol;
+        private ProtocolType protocol = ProtocolType.Tcp;
         [SerializeField]
-        private int bufferSize;
+        private int bufferSize = 2048;
+
+        private bool connected;
 
         /// <summary>
         /// Gets or sets the size of the buffer.
@@ -101,12 +102,11 @@ namespace DoubTech.Sockets {
             // an exception that occurs when the host IP Address is not compatible with the address family
             // (typical in the IPv6 case).
             foreach (IPAddress address in hostEntry.AddressList) {
+                if (address.AddressFamily != AddressFamily.InterNetwork) continue;
                 IPEndPoint ipe = new IPEndPoint(address, port);
                 Socket tempSocket =
                     new Socket(ipe.AddressFamily, SocketType.Stream, protocol);
-
                 tempSocket.Connect(ipe);
-
                 if (tempSocket.Connected) {
                     s = tempSocket;
                     break;
@@ -116,16 +116,28 @@ namespace DoubTech.Sockets {
         }
 
         private void Listen(Socket socket) {
-            byte[] buffer = new byte[BufferSize];
-            int bytes = 0;
-            do {
-                bytes = socket.Receive(buffer, buffer.Length, 0);
-                receiveBytes(buffer, bytes);
-                if (bufferSize != buffer.Length) {
-                    buffer = new byte[BufferSize];
+            try {
+                byte[] buffer = new byte[BufferSize];
+                int bytes = 0;
+                do {
+                    try {
+                        bytes = socket.Receive(buffer, buffer.Length, 0);
+                    } catch (SocketException e) {
+                        if (connected) {
+                            OnListenerSocketException(e);
+                        }
+                    }
+                    if (bytes > 0) {
+                        receiveBytes(buffer, bytes);
+                        if (bufferSize != buffer.Length) {
+                            buffer = new byte[BufferSize];
+                        }
+                    }
                 }
+                while (connected);
+            } catch (ThreadAbortException) {
+                // If thread was aborted we're shutting down. Do nothing.
             }
-            while (bytes > 0);
         }
 
         private void receiveBytes(byte[] buffer, int len) {
@@ -139,15 +151,22 @@ namespace DoubTech.Sockets {
         /// </summary>
         public void Connnect() {
             if (IsConnected) return;
-            if (null != socket && socket.Connected) socket.Disconnect(false);
+            if (null != socket && socket.Connected) socket.Disconnect(true);
             socketThread = RunOnBackground(SocketMainThread);
         }
 
         private void ShutdownSocket() {
             if (null != socket && socket.Connected) {
-                socket.Disconnect(false);
+                connected = false;
+                socket.Disconnect(true);
                 socket.Close();
                 RunOnMain(OnDisconected);
+            }
+            if(socketThread != null) {
+                if(Thread.CurrentThread != socketThread && socketThread.IsAlive) {
+                    socketThread.Abort();
+                }
+                socketThread = null;
             }
         }
 
@@ -155,18 +174,26 @@ namespace DoubTech.Sockets {
         /// Disconnect from the server and shut down the client thread.
         /// </summary>
         public void Disconnect() {
-            socketThread.Abort();
             ShutdownSocket();
         }
 
         private void SocketMainThread() {
             try {
+                connected = false;
+                OnConnecting();
                 socket = ConnectSocket(Host, Port, Protocol);
                 if (null == socket) {
                     RunOnMain(OnConnectionFailed);
                     return;
                 }
-                RunOnMain(OnConnected);
+                RunOnMain(() => { 
+                    OnConnected();
+                    connected = true;
+                    });
+                // Wait until we have finished connection initialization and
+                // allowed the main thread to update accordingly before we start
+                // listening for data.
+                while (!connected) Thread.Sleep(100);
                 Listen(socket);
             } catch (SocketException e) {
                 RunOnMain(() => {
@@ -215,6 +242,7 @@ namespace DoubTech.Sockets {
             }
         }
 
+        protected abstract void OnConnecting();
         protected abstract void OnConnectionFailed();
         protected abstract void OnDisconected();
         protected abstract void OnConnected();
@@ -226,6 +254,15 @@ namespace DoubTech.Sockets {
         /// <param name="e">E.</param>
         protected virtual bool OnSocketException(SocketException e) {
             return false;
+        }
+
+        /// <summary>
+        /// Called when there is a socket exception
+        /// </summary>
+        /// <returns><c>true</c>, if the exception was handled and the socket can remain connected, <c>false</c> otherwise disconnect and shutdown.</returns>
+        /// <param name="e">E.</param>
+        protected virtual void OnListenerSocketException(SocketException e) {
+
         }
 
         /// <summary>

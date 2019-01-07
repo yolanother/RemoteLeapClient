@@ -19,6 +19,8 @@ namespace DoubTech.Util {
             Thread thread = new Thread(() => {
                 try {
                     d();
+                } catch (ThreadAbortException) {
+                    // Thread was shut down.
                 } catch (Exception e) {
                     RunOnMain(() => {
                         OnExceptionThrown(e, threadName);
@@ -41,7 +43,9 @@ namespace DoubTech.Util {
         }
 
         protected virtual void OnExceptionThrown(Exception e, string threadName) {
-            throw e;
+            if (!(e is ThreadAbortException)) {
+                throw e;
+            }
         }
     }
 }
