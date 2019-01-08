@@ -10,33 +10,12 @@ namespace DoubTech.Sockets {
         public delegate void SocketSendFailedLister(Exception e);
 
         private Thread socketThread;
-        private Socket socket;
         [SerializeField]
         private string host = "localhost";
         [SerializeField]
         private int port = 4444;
-        [SerializeField]
-        private ProtocolType protocol = ProtocolType.Tcp;
-        [SerializeField]
-        private int bufferSize = 2048;
 
         private bool connected;
-
-        /// <summary>
-        /// Gets or sets the size of the buffer.
-        /// 
-        /// NOTE: If connected this will take effect after the next block of data
-        /// is received.
-        /// </summary>
-        /// <value>The size of the buffer.</value>
-        public int BufferSize {
-            get {
-                return bufferSize;
-            }
-            set {
-                bufferSize = value;
-            }
-        }
 
         /// <summary>
         /// Gets or sets the host.
@@ -68,70 +47,32 @@ namespace DoubTech.Sockets {
         }
 
         /// <summary>
-        /// Gets or sets the protocol.
-        /// </summary>
-        /// <value>The protocol.</value>
-        public ProtocolType Protocol {
-            get {
-                return protocol;
-            }
-            set {
-                if (IsConnected) throw new ArgumentException("Cannot set protocol while connected.");
-                protocol = value;
-            }
-        }
-
-        /// <summary>
         /// Returns true if the socket thread is running and is connected to the host
         /// </summary>
         /// <value><c>true</c> if is connected; otherwise, <c>false</c>.</value>
         public bool IsConnected {
             get {
-                return null != socketThread && socketThread.IsAlive && socket.Connected;
+                return null != socketThread && socketThread.IsAlive && null != Socket && Socket.Connected;
             }
         }
 
-        private static Socket ConnectSocket(string server, int port, ProtocolType protocol) {
-            Socket s = null;
-            IPHostEntry hostEntry = null;
-
-            // Get host related information.
-            hostEntry = Dns.GetHostEntry(server);
-
-            // Loop through the AddressList to obtain the supported AddressFamily. This is to avoid
-            // an exception that occurs when the host IP Address is not compatible with the address family
-            // (typical in the IPv6 case).
-            foreach (IPAddress address in hostEntry.AddressList) {
-                if (address.AddressFamily != AddressFamily.InterNetwork) continue;
-                IPEndPoint ipe = new IPEndPoint(address, port);
-                Socket tempSocket =
-                    new Socket(ipe.AddressFamily, SocketType.Stream, protocol);
-                tempSocket.Connect(ipe);
-                if (tempSocket.Connected) {
-                    s = tempSocket;
-                    break;
-                }
-            }
-            return s;
+        protected abstract BaseSocket Socket {
+            get;
         }
 
-        private void Listen(Socket socket) {
+        private void Listen() {
             try {
-                byte[] buffer = new byte[BufferSize];
-                int bytes = 0;
+                byte[] buffer = new byte[0];
                 do {
                     try {
-                        bytes = socket.Receive(buffer, buffer.Length, 0);
+                        buffer = Socket.Receive();
                     } catch (SocketException e) {
                         if (connected) {
                             OnListenerSocketException(e);
                         }
                     }
-                    if (bytes > 0) {
-                        receiveBytes(buffer, bytes);
-                        if (bufferSize != buffer.Length) {
-                            buffer = new byte[BufferSize];
-                        }
+                    if (buffer.Length > 0) {
+                        receiveBytes(buffer, buffer.Length);
                     }
                 }
                 while (connected);
@@ -149,17 +90,16 @@ namespace DoubTech.Sockets {
         /// <summary>
         /// Connect to the host and port defined by <see cref="Host"/>
         /// </summary>
-        public void Connnect() {
+        public void Connect() {
             if (IsConnected) return;
-            if (null != socket && socket.Connected) socket.Disconnect(true);
+            if (null != Socket && Socket.Connected) Socket.Disconnect();
             socketThread = RunOnBackground(SocketMainThread);
         }
 
         private void ShutdownSocket() {
-            if (null != socket && socket.Connected) {
+            if (null != Socket && Socket.Connected) {
                 connected = false;
-                socket.Disconnect(true);
-                socket.Close();
+                Socket.Disconnect();
                 RunOnMain(OnDisconected);
             }
             if(socketThread != null) {
@@ -181,11 +121,11 @@ namespace DoubTech.Sockets {
             try {
                 connected = false;
                 OnConnecting();
-                socket = ConnectSocket(Host, Port, Protocol);
-                if (null == socket) {
+                if (null == Socket) {
                     RunOnMain(OnConnectionFailed);
                     return;
                 }
+                Socket.Connect(Host, Port);
                 RunOnMain(() => { 
                     OnConnected();
                     connected = true;
@@ -194,7 +134,7 @@ namespace DoubTech.Sockets {
                 // allowed the main thread to update accordingly before we start
                 // listening for data.
                 while (!connected) Thread.Sleep(100);
-                Listen(socket);
+                Listen();
             } catch (SocketException e) {
                 RunOnMain(() => {
                     if (!OnSocketException(e)) {
@@ -230,7 +170,7 @@ namespace DoubTech.Sockets {
 
         private void DoSend(byte[] buffer, SocketSendFailedLister failedListener = null) {
             try {
-                socket.Send(buffer);
+                Socket.Send(buffer);
             } catch (ThreadAbortException) {
                 // Do nothing, thread was shutdown
             } catch (Exception e) {

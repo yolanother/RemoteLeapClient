@@ -14,7 +14,23 @@ namespace DoubTech.Leap {
         [SerializeField]
         private Hand rightHand;
 
+        public enum Protocol {
+            Tcp,
+            Udp
+        }
+
+        [SerializeField]
+        private Protocol protocol = Protocol.Udp;
+
         private BitpackedDataBuffer dataBuffer = new BitpackedDataBuffer();
+        private BaseSocket tcpSocket = new TcpSocket(2048);
+        private BaseSocket udpSocket = new UdpSocket();
+        
+        protected override BaseSocket Socket {
+            get {
+                return protocol == Protocol.Tcp ? tcpSocket : udpSocket;
+            }
+        }
 
         protected override void OnConnecting() {
             Debug.Log("Connecting...");
