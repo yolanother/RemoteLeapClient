@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace DoubTech.Util {
     public abstract class BackgroundableMonoBehavior : MonoBehaviour {
-
+        private List<Thread> backgroundThreads = new List<Thread>();
         private List<ThreadStart> mainThreadQueue = new List<ThreadStart>();
 
         public void RunOnMain(ThreadStart d) {
@@ -30,6 +30,18 @@ namespace DoubTech.Util {
             thread.Start();
             return thread;
         }
+
+        private void OnDestroy() {
+            OnPreThreadDestroy();
+            // Make sure we shot down any remaining open threads
+            foreach(Thread thread in backgroundThreads) {
+                thread.Abort();
+            }
+            OnPostThreadDestroy();
+        }
+
+        virtual protected void OnPreThreadDestroy() { }
+        virtual protected void OnPostThreadDestroy() { }
 
         virtual protected void Update() {
             List<ThreadStart> pending = new List<ThreadStart>();

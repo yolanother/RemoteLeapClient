@@ -41,7 +41,7 @@ namespace DoubTech.Sockets {
 
         public void Disconnect() {
             if(null != socket) {
-                socket.Disconnect(false);
+                socket.Shutdown(SocketShutdown.Both);
                 socket.Close();
                 socket = null;
             }

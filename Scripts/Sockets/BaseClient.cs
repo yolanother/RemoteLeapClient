@@ -16,6 +16,7 @@ namespace DoubTech.Sockets {
         private int port = 4444;
 
         private bool connected;
+        private bool connecting;
 
         /// <summary>
         /// Gets or sets the host.
@@ -33,7 +34,7 @@ namespace DoubTech.Sockets {
 
         /// <summary>
         /// Gets or sets the port.
-        /// 
+        ///
         /// </summary>
         /// <value>The port.</value>
         public int Port {
@@ -53,6 +54,16 @@ namespace DoubTech.Sockets {
         public bool IsConnected {
             get {
                 return null != socketThread && socketThread.IsAlive && null != Socket && Socket.Connected;
+            }
+        }
+
+        /// <summary>
+        /// Returns true if the socket thread is running and is connected to the host
+        /// </summary>
+        /// <value><c>true</c> if is connected; otherwise, <c>false</c>.</value>
+        public bool IsConnecting {
+            get {
+                return connecting;
             }
         }
 
@@ -97,11 +108,14 @@ namespace DoubTech.Sockets {
         }
 
         private void ShutdownSocket() {
-            if (null != Socket && Socket.Connected) {
-                connected = false;
-                Socket.Disconnect();
-                RunOnMain(OnDisconected);
-            }
+            connecting = false;
+            RunOnMain(() => {
+                if (null != Socket && Socket.Connected) {
+                    connected = false;
+                    Socket.Disconnect();
+                    OnDisconected();
+                }
+            });
             if(socketThread != null) {
                 if(Thread.CurrentThread != socketThread && socketThread.IsAlive) {
                     socketThread.Abort();
@@ -120,15 +134,17 @@ namespace DoubTech.Sockets {
         private void SocketMainThread() {
             try {
                 connected = false;
+                connecting = true;
                 OnConnecting();
                 if (null == Socket) {
                     RunOnMain(OnConnectionFailed);
                     return;
                 }
                 Socket.Connect(Host, Port);
-                RunOnMain(() => { 
+                RunOnMain(() => {
                     OnConnected();
                     connected = true;
+                    connecting = false;
                     });
                 // Wait until we have finished connection initialization and
                 // allowed the main thread to update accordingly before we start
@@ -150,6 +166,16 @@ namespace DoubTech.Sockets {
                 // unhandled exception hanndler will be used.
                 throw e;
             }
+        }
+
+        private void OnApplicationPause(bool pause) {
+            if(pause) {
+                Disconnect();
+            }
+        }
+
+        private void OnDisable() {
+            Disconnect();
         }
 
         /// <summary>

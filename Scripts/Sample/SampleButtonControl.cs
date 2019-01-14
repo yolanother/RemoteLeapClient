@@ -23,14 +23,18 @@ namespace DoubTech.Leap.Sample {
         [SerializeField]
         private InputField port;
 
+        [SerializeField]
+        private GameObject connecting;
+
         private void Start() {
             host.text = PlayerPrefs.GetString(PREFS_KEY_HOST, "localhost");
             port.text = PlayerPrefs.GetString(PREFS_KEY_PORT, "4444");
         }
 
         void Update() {
-            connectButton.SetActive(!boneClient.IsConnected);
-            disconnectButton.SetActive(boneClient.IsConnected);
+            connectButton.SetActive(!boneClient.IsConnected && !boneClient.IsConnecting);
+            disconnectButton.SetActive(boneClient.IsConnected && !boneClient.IsConnecting);
+            connecting.SetActive(boneClient.IsConnecting);
         }
 
         public void Connect() {
