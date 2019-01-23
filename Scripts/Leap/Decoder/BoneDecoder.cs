@@ -4,9 +4,23 @@ using UnityEngine;
 
 namespace DoubTech.Leap {
     public abstract class BoneDecoder {
+        private Vector3 DIRECTION_FIX = new Vector3(-1, 1, 1);
         public Header header;
-        private Vector3 position;
+        protected Vector3 position;
+        protected Vector3 direction;
         public readonly string name;
+
+        public Vector3 Position {
+            get {
+                return position;
+            }
+        }
+
+        public Vector3 Direction {
+            get {
+                return direction;
+            }
+        }
 
         public BoneDecoder(Header header, string name = null) {
             this.name = name;
@@ -18,29 +32,36 @@ namespace DoubTech.Leap {
             this.header = parent.header;
         }
 
-        public void Decode() {
-            position = OnDecode();
-        }
-
-        protected virtual Vector3 OnDecode() {
-            return DecodeVector(header.boneCoordSize);
+        public virtual void Decode() {
+            position = DecodeVector(header.boneCoordSize);
+            direction = DecodeVector(header.boneDirectionSize);
         }
 
         public void ApplyTransform(Transform transform) {
-            transform.localPosition = position;
+            transform.localPosition = position / 100;
+            //transform.rotation = Quaternion.Euler(direction);
+        }
+
+        public void ApplyGlobalRotation(Transform transform) {
+            Debug.Log(direction);
+            transform.rotation = Quaternion.Euler(direction);
         }
 
         protected float DecodeCoordinate(CoordinateBucket.Bucket coordSize) {
             bool pos = header.reader.ReadBool();
             int coord = header.reader.ReadInt(CoordinateBucket.GetBucketSize(coordSize));
-            return (pos ? 1 : -1) * PrecisionBucket.ApplyPrecision(header.precision, coord);
+            return (pos ? -1 : 1) * PrecisionBucket.ApplyPrecision(header.precision, coord);
         }
 
         protected Vector3 DecodeVector(CoordinateBucket.Bucket coordSize) {
+            return DecodeVector(coordSize, Vector3.one);
+        }
+
+        protected Vector3 DecodeVector(CoordinateBucket.Bucket coordSize, Vector3 adjustment) {
             return new Vector3(
-                DecodeCoordinate(coordSize),
-                DecodeCoordinate(coordSize),
-                DecodeCoordinate(coordSize)
+                DecodeCoordinate(coordSize) * adjustment.x,
+                DecodeCoordinate(coordSize) * adjustment.y,
+                DecodeCoordinate(coordSize) * adjustment.z
             );
         }
     }

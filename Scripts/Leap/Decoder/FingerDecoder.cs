@@ -14,11 +14,12 @@ namespace DoubTech.Leap {
             for (int i = 0; i < bones.Length; i++) bones[i] = new FingerBoneDecoder(this, name + "," + i);
         }
 
-        protected override Vector3 OnDecode() {
+        public override void Decode() {
             foreach (FingerBoneDecoder bone in bones) {
                 bone.Decode();
             }
-            return Vector3.zero;
+            position = Vector3.zero;
+            direction = Vector3.zero;
         }
     }
 

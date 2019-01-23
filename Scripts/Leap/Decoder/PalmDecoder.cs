@@ -26,14 +26,14 @@ namespace DoubTech.Leap {
             pinky = new FingerDecoder(this, "pinky");
         }
 
-        protected override Vector3 OnDecode() {
-            Vector3 palm = DecodeVector(header.palmCoordSize);
+        public override void Decode() {
+            position = DecodeVector(header.palmCoordSize);
+            direction = Quaternion.Euler(-90, 0, 0) * DecodeVector(header.boneDirectionSize);
             thumb.Decode();
             index.Decode();
             middle.Decode();
             ring.Decode();
             pinky.Decode();
-            return palm;
         }
     }
 }

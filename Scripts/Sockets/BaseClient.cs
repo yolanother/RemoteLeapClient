@@ -110,8 +110,8 @@ namespace DoubTech.Sockets {
         private void ShutdownSocket() {
             connecting = false;
             RunOnMain(() => {
+                connected = false;
                 if (null != Socket && Socket.Connected) {
-                    connected = false;
                     Socket.Disconnect();
                     OnDisconected();
                 }

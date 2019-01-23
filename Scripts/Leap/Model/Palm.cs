@@ -33,7 +33,8 @@ namespace DoubTech.Leap {
         public override void ApplyBones(BoneDecoder boneDecoder) {
            if(boneDecoder is PalmDecoder) {
                 PalmDecoder palmDecoder = boneDecoder as PalmDecoder;
-                palmDecoder.ApplyTransform(transform);
+                if(enablePositionTracking) palmDecoder.ApplyTransform(transform);
+                if(enableRotationTracking) palmDecoder.ApplyGlobalRotation(transform);
                 if (thumb) thumb.ApplyBones(palmDecoder.thumb);
                 if (index) index.ApplyBones(palmDecoder.index);
                 if (middle) middle.ApplyBones(palmDecoder.middle);

@@ -4,7 +4,26 @@ using UnityEngine;
 
 namespace DoubTech.Leap {
     public class LeapBone : MonoBehaviour {
+        [SerializeField]
+        protected bool enablePositionTracking = true;
+        [SerializeField]
+        protected bool enableRotationTracking = false;
         private bool isTracking;
+
+        protected LineRenderer lineRenderer;
+
+        private void Start() {
+            lineRenderer = GetComponent<LineRenderer>();
+            if (lineRenderer) {
+                lineRenderer.enabled = false;
+            }
+        }
+
+        public LineRenderer LineRenderer {
+            get {
+                return lineRenderer;
+            }
+        }
 
         public virtual bool IsTracking {
             get {
@@ -15,7 +34,8 @@ namespace DoubTech.Leap {
         }
 
         public virtual void ApplyBones(BoneDecoder boneDecoder) {
-            boneDecoder.ApplyTransform(transform);
+            if (enablePositionTracking) boneDecoder.ApplyTransform(transform);
+            if (enableRotationTracking) boneDecoder.ApplyGlobalRotation(transform);
         }
     }
 }

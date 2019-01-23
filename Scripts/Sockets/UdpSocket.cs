@@ -4,6 +4,7 @@ using UnityEngine;
 namespace DoubTech.Sockets {
     public class UdpSocket : BaseSocket {
         private System.Net.Sockets.UdpClient udpClient;
+        private int port;
 
         public bool Connected {
             get {
@@ -13,7 +14,7 @@ namespace DoubTech.Sockets {
 
         public void Connect(string server, int port) {
             udpClient = new System.Net.Sockets.UdpClient(port);
-            udpClient.Connect(server, port);
+            this.port = port;
             Debug.Log("Connnencted to udp server " + server);
         }
 
@@ -24,7 +25,8 @@ namespace DoubTech.Sockets {
 
         public byte[] Receive() {
             //IPEndPoint object will allow us to read datagrams sent from any source.
-            IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, 0);
+            IPEndPoint remoteEP = new IPEndPoint(IPAddress.Any, port);
+            Debug.Log("Listening for incoming data on udp port " + port);
             byte[] buffer = udpClient.Receive(ref remoteEP);
             Debug.Log("Received " + buffer.Length + " bytes");
             return buffer;
