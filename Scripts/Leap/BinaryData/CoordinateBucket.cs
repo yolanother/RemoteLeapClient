@@ -6,7 +6,7 @@ using UnityEngine;
 public class CoordinateBucket {
     public enum Bucket : int {
         BucketMin = 0,
-        Bucket_8 = 0,
+        Bucket_Disabled = 0,
         Bucket_10,
         Bucket_13,
         Bucket_16,
@@ -18,7 +18,7 @@ public class CoordinateBucket {
     }
 
     public static readonly int[] PositionBucketSizes = {
-        8,
+        0,
         10,
         13,
         16,

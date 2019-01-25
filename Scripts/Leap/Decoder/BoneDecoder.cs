@@ -58,6 +58,7 @@ namespace DoubTech.Leap {
         }
 
         protected Vector3 DecodeVector(CoordinateBucket.Bucket coordSize, Vector3 adjustment) {
+            if (coordSize == CoordinateBucket.Bucket.Bucket_Disabled) return Vector3.zero;
             return new Vector3(
                 DecodeCoordinate(coordSize) * adjustment.x,
                 DecodeCoordinate(coordSize) * adjustment.y,

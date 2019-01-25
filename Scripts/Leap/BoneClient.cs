@@ -80,13 +80,19 @@ namespace DoubTech.Leap {
                 RunOnMain(() => {
                     if (null != leftPalm) {
                         if (null != leftHand && null != leftHand.Palm) {
+                            leftHand.gameObject.SetActive(true);
                             leftHand.Palm.ApplyBones(leftPalm);
                         }
+                    } else if (null != leftHand) {
+                        leftHand.gameObject.SetActive(false);
                     }
                     if (null != rightPalm) {
                         if (null != rightHand && null != rightHand.Palm) {
+                            rightHand.gameObject.SetActive(true);
                             rightHand.Palm.ApplyBones(rightPalm);
                         }
+                    } else if(null != rightHand) {
+                        rightHand.gameObject.SetActive(false);
                     }
                 });
             }

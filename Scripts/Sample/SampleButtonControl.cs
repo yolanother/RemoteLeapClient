@@ -26,6 +26,9 @@ namespace DoubTech.Leap.Sample {
         [SerializeField]
         private GameObject connecting;
 
+        [SerializeField]
+        private GameObject connected;
+
         private void Start() {
             host.text = PlayerPrefs.GetString(PREFS_KEY_HOST, "localhost");
             port.text = PlayerPrefs.GetString(PREFS_KEY_PORT, "4444");
@@ -34,7 +37,8 @@ namespace DoubTech.Leap.Sample {
         void Update() {
             connectButton.SetActive(!boneClient.IsConnected && !boneClient.IsConnecting);
             disconnectButton.SetActive(boneClient.IsConnected && !boneClient.IsConnecting);
-            connecting.SetActive(boneClient.IsConnecting);
+            if(connecting) connecting.SetActive(boneClient.IsConnecting);
+            if (connected) connected.SetActive(boneClient.IsConnected);
         }
 
         public void Connect() {
